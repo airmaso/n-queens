@@ -1,12 +1,5 @@
-"""
-Trying to recall information from CSC384H1: AI @ University of Toronto.
-06-08-2026 @ 1:36 PM CT
-"""
-
-import threading
 import time
 from dataclasses import dataclass, field
-import matplotlib.pyplot as plot
 
 
 @dataclass
@@ -104,15 +97,15 @@ def restore(nq: NQueens, diff: dict[int, set[int]]):
         nq.domains[other_col] |= rows
 
 
-def backtrack(nq: NQueens) -> list[int]:
+def backtrack(nq: NQueens, find_all: bool = False) -> list[int]:
     if nq.complete():
-        return nq.assignments.copy()
+        return [nq.assignments.copy()]
     
-    solution: list[int] = []
+    solutions: list[int] = []
 
     col = mrv(nq)
     if col is None:
-        return solution
+        return solutions
     
     for row in lcv(nq, col):
         nq.explored += 1
@@ -126,118 +119,41 @@ def backtrack(nq: NQueens) -> list[int]:
                 len(nq.domains[c]) > 0 or nq.assignments[c] != -1
                 for c in range(nq.n)
             ):
-                result = backtrack(nq)
-                solution.extend(result)
+                result = backtrack(nq, find_all=find_all)
+                solutions.extend(result)
 
-                if solution:
-                    return solution
+                if solutions and not find_all:
+                    nq.assignments[col] = -1
+                    restore(nq, diff)
+                    return solutions
 
-
-            # assignment didn't reach success case, choose different row
+            # assignment didn't reach success case or finding all solution, choose different row
             nq.assignments[col] = -1
             restore(nq, diff)
         else:
             nq.backtracks += 1
 
-    return solution    
+    return solutions
 
 
 @dataclass
-class SolveResult:
-    n: int
-    elapsed: float
-    solution: list[int]
-    explored: int
+class NQueensSolve:
+    n:          int
+    elapsed:    float  # units=ms
+    solutions:  list[list[int]]
+    explored:   int
     backtracks: int
 
 
-data: list[SolveResult] = []  # thread-safe
-def solve(nq: NQueens):
+def solve(nq: NQueens, find_all: bool = False) -> NQueensSolve:
     start = time.perf_counter()
-    soln = backtrack(nq)
+    solns = backtrack(nq, find_all=find_all)
     end = time.perf_counter()
 
-    data.append(SolveResult(
+    return NQueensSolve(
         n=nq.n,
-        elapsed=(end - start),
-        solution=soln,
+        elapsed=(end - start) * 1000,
+        solutions=solns,
         explored=nq.explored,
         backtracks=nq.backtracks
-    ))
-
-    # print(nq.n, soln)
-
-
-@dataclass
-class FigureData:
-    title:  str
-    xlabel: str
-    ylabel: str
-    xdata:  list[int]
-    ydata:  list[int | float]
-    color:  str
-    marker: str
-    label:  str
-
-
-if __name__ == "__main__":
-    n = 88
-    threads = [
-        threading.Thread(target=solve, args=(NQueens(n),))
-        for n in range(1, n + 1)
-    ]
-
-    for t in threads: t.start()
-    for t in threads: t.join()
-
-    data.sort(key=lambda sr: sr.n)
-    ns = [sr.n for sr in data]
-
-    figures: list[FigureData] = [
-        FigureData(
-            title="n vs. time",
-            xlabel="n",
-            ylabel="time (s)",
-            xdata=ns,
-            ydata=[sr.elapsed for sr in data],
-            color="#7F956A",
-            marker="o",
-            label="n_elapsed"
-        ),
-        FigureData(
-            title="n vs. explored",
-            xlabel="n",
-            ylabel="explored",
-            xdata=ns,
-            ydata=[sr.explored for sr in data],
-            color="#495940",
-            marker="o",
-            label="n_explored"
-        ),
-        FigureData(
-            title="n vs. backtracks",
-            xlabel="n",
-            ylabel="backtracks",
-            xdata=ns,
-            ydata=[sr.backtracks for sr in data],
-            color="#000000",
-            marker="o",
-            label="n_backtracks"
-        ),
-    ]
-    
-    for idx, figure in enumerate(figures, start=1):
-        plot.figure(idx)
-        plot.grid(visible=True)
-
-        plot.title(figure.title)
-        plot.xlabel(figure.xlabel)
-        plot.ylabel(figure.ylabel)
-
-        plt = plot.plot(
-            figure.xdata, figure.ydata,
-            color=figure.color,
-            # marker=figure.marker
-        )
-
-    plot.show()
+    )
