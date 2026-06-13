@@ -2,7 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser(
     prog="n_queens",
-    description="optimized n-queens solver using mrv+lcv heuristics"
+    description="An optimized n-queens solver that utilizes mrv+lcv heuristics"
 )
 
 # board dimension and the number of queens
