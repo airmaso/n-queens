@@ -3,7 +3,7 @@
 An optimized N-queens solver using minimum remaining values (MRV) + least-constraining-value (LCV) heuristics.
 
 <p align="center">
-    <img src="./assets/terminal.gif">
+    <img src="./assets/example.gif">
 </p>
 
 ## Setup
